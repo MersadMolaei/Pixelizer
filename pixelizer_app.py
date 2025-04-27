@@ -1,6 +1,7 @@
 import requests
 import argparse
 import os
+import urllib.parse # Import urllib.parse to handle URL parsing
 
 # --- Configuration ---
 # Base URL for the API
@@ -104,6 +105,45 @@ def pixelize_uploaded_image(api_key: str, file_path: str) -> str | None:
         print(f"An unexpected error occurred while processing file '{file_path}': {e}")
         return None
 
+def download_image(image_url: str, output_path: str) -> bool:
+    """
+    Downloads an image from a given URL and saves it to a local file.
+
+    Args:
+        image_url: The URL of the image to download.
+        output_path: The path where the image should be saved.
+
+    Returns:
+        True if the download was successful, False otherwise.
+    """
+    print(f"Attempting to download image from: {image_url}")
+    try:
+        # Use stream=True to download the image content in chunks
+        response = requests.get(image_url, stream=True)
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+
+        # Get the directory name from the output path
+        output_dir = os.path.dirname(output_path)
+        # Create the directory if it doesn't exist
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"Created directory: {output_dir}")
+
+
+        # Write the image content to the file in binary write mode
+        with open(output_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        print(f"Successfully downloaded image to: {output_path}")
+        return True
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading image from '{image_url}': {e}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred during download: {e}")
+        return False
 
 # --- Main application logic ---
 
@@ -131,12 +171,20 @@ if __name__ == "__main__":
         help="Path to the local image file to pixelize."
     )
 
+    # Add optional output file argument
+    parser.add_argument(
+        "--output",
+        help="Path and filename to save the pixelized image. Defaults to 'pixelized_image.jpg' in the current directory."
+    )
+
+
     # Parse the arguments from the command line
     args = parser.parse_args()
 
     api_key = args.api_key
     image_url = args.url
     file_path = args.file
+    output_path = args.output
 
     pixelized_image_url = None
 
@@ -151,10 +199,33 @@ if __name__ == "__main__":
             print(f"Error: The specified file path does not exist: {file_path}")
             exit(1) # Exit with an error code
 
-    # Print the result
+    # Process the result if the API call was successful
     if pixelized_image_url:
         print("\nSuccessfully pixelized image!")
         print(f"Resulting pixelized image URL: {pixelized_image_url}")
+
+        # Determine the output path if not provided
+        if not output_path:
+            # Try to infer filename from URL, otherwise use a default
+            try:
+                parsed_url = urllib.parse.urlparse(pixelized_image_url)
+                filename = os.path.basename(parsed_url.path)
+                if not filename or "." not in filename: # Basic check for a valid filename
+                     filename = "pixelized_image.jpg"
+                output_path = filename
+            except:
+                 output_path = "pixelized_image.jpg" # Fallback to default
+
+            print(f"No output path specified. Using default: {output_path}")
+
+
+        # Download the image
+        if download_image(pixelized_image_url, output_path):
+            print("Image processing and download complete.")
+        else:
+            print("Image processing complete, but download failed.")
+            exit(1) # Exit with an error code for download failure
+
     else:
         print("\nFailed to pixelize image.")
-        exit(1) # Exit with an error code
+        exit(1) # Exit with an error code for API failure
