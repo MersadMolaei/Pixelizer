@@ -1,7 +1,14 @@
 import requests
 import argparse
 import os
-import urllib.parse # Import urllib.parse to handle URL parsing
+import urllib.parse
+import sys # Import sys to check platform for colorama
+from colorama import init, Fore, Style # Import colorama for colored output
+
+# --- Initialize Colorama ---
+# init(autoreset=True) will automatically reset the color after each print statement
+# wrap_sys=True was removed in newer versions, autoreset=True often handles wrapping
+init(autoreset=True)
 
 # --- Configuration ---
 # Base URL for the API
@@ -32,7 +39,7 @@ def pixelize_image_from_url(api_key: str, image_url: str) -> str | None:
         "url": image_url
     }
 
-    print(f"Sending request to pixelize image from URL: {image_url}")
+    print(f"{Fore.CYAN}Sending request to pixelize image from URL: {image_url}{Style.RESET_ALL}")
 
     try:
         response = requests.get(URL_ENDPOINT, headers=headers, params=params)
@@ -42,16 +49,16 @@ def pixelize_image_from_url(api_key: str, image_url: str) -> str | None:
         if "result" in result:
             return result["result"]
         else:
-            print(f"API response did not contain a 'result' field: {result}")
+            print(f"{Fore.YELLOW}API response did not contain a 'result' field: {result}{Style.RESET_ALL}")
             return None
 
     except requests.exceptions.RequestException as e:
-        print(f"Error calling API for URL '{image_url}': {e}")
+        print(f"{Fore.RED}Error calling API for URL '{image_url}': {e}{Style.RESET_ALL}")
         # Attempt to print API error message if available
         try:
             error_response = e.response.json()
             if "message" in error_response:
-                 print(f"API Error Message: {error_response['message']}")
+                 print(f"{Fore.RED}API Error Message: {error_response['message']}{Style.RESET_ALL}")
         except:
             pass # Ignore if response is not JSON or message is not present
         return None
@@ -71,7 +78,7 @@ def pixelize_uploaded_image(api_key: str, file_path: str) -> str | None:
         "apikey": api_key
     }
 
-    print(f"Sending request to pixelize uploaded image file: {file_path}")
+    print(f"{Fore.CYAN}Sending request to pixelize uploaded image file: {file_path}{Style.RESET_ALL}")
 
     try:
         # Open the file in binary read mode
@@ -85,24 +92,24 @@ def pixelize_uploaded_image(api_key: str, file_path: str) -> str | None:
         if "result" in result:
             return result["result"]
         else:
-            print(f"API response did not contain a 'result' field: {result}")
+            print(f"{Fore.YELLOW}API response did not contain a 'result' field: {result}{Style.RESET_ALL}")
             return None
 
     except FileNotFoundError:
-        print(f"Error: File not found at path '{file_path}'")
+        print(f"{Fore.RED}Error: File not found at path '{file_path}'{Style.RESET_ALL}")
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Error calling API for file upload '{file_path}': {e}")
+        print(f"{Fore.RED}Error calling API for file upload '{file_path}': {e}{Style.RESET_ALL}")
         # Attempt to print API error message if available
         try:
             error_response = e.response.json()
             if "message" in error_response:
-                 print(f"API Error Message: {error_response['message']}")
+                 print(f"{Fore.RED}API Error Message: {error_response['message']}{Style.RESET_ALL}")
         except:
             pass # Ignore if response is not JSON or message is not present
         return None
     except Exception as e:
-        print(f"An unexpected error occurred while processing file '{file_path}': {e}")
+        print(f"{Fore.RED}An unexpected error occurred while processing file '{file_path}': {e}{Style.RESET_ALL}")
         return None
 
 def download_image(image_url: str, output_path: str) -> bool:
@@ -116,7 +123,7 @@ def download_image(image_url: str, output_path: str) -> bool:
     Returns:
         True if the download was successful, False otherwise.
     """
-    print(f"Attempting to download image from: {image_url}")
+    print(f"{Fore.CYAN}Attempting to download image from: {image_url}{Style.RESET_ALL}")
     try:
         # Use stream=True to download the image content in chunks
         response = requests.get(image_url, stream=True)
@@ -127,7 +134,7 @@ def download_image(image_url: str, output_path: str) -> bool:
         # Create the directory if it doesn't exist
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            print(f"Created directory: {output_dir}")
+            print(f"{Fore.CYAN}Created directory: {output_dir}{Style.RESET_ALL}")
 
 
         # Write the image content to the file in binary write mode
@@ -135,14 +142,14 @@ def download_image(image_url: str, output_path: str) -> bool:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
-        print(f"Successfully downloaded image to: {output_path}")
+        print(f"{Fore.GREEN}Successfully downloaded image to: {output_path}{Style.RESET_ALL}")
         return True
 
     except requests.exceptions.RequestException as e:
-        print(f"Error downloading image from '{image_url}': {e}")
+        print(f"{Fore.RED}Error downloading image from '{image_url}': {e}{Style.RESET_ALL}")
         return False
     except Exception as e:
-        print(f"An unexpected error occurred during download: {e}")
+        print(f"{Fore.RED}An unexpected error occurred during download: {e}{Style.RESET_ALL}")
         return False
 
 # --- Main application logic ---
@@ -150,31 +157,31 @@ def download_image(image_url: str, output_path: str) -> bool:
 if __name__ == "__main__":
     # Set up command-line argument parsing
     parser = argparse.ArgumentParser(
-        description="Pixelize faces in an image using the Face Pixelizer API."
+        description=f"{Fore.CYAN}Provided By Mersad Molaei{Style.RESET_ALL} Website: {Fore.GREEN}https://Mersadev.ir{Style.RESET_ALL} Github: {Fore.BLUE}https://Github.com/MersadMolaei {Fore.YELLOW}Pixelize faces in an image using the Face Pixelizer API.{Style.RESET_ALL}"
     )
 
     # Add required API key argument
     parser.add_argument(
         "--api-key",
         required=True,
-        help="Your API key for the Face Pixelizer API."
+        help=f"{Fore.YELLOW}Your API key for the Face Pixelizer API. (Required){Style.RESET_ALL}"
     )
 
     # Add mutually exclusive group for URL or file path
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--url",
-        help="URL of the image to pixelize."
+        help=f"{Fore.YELLOW}URL of the image to pixelize. (Required if --file is not used){Style.RESET_ALL}"
     )
     group.add_argument(
         "--file",
-        help="Path to the local image file to pixelize."
+        help=f"{Fore.YELLOW}Path to the local image file to pixelize. (Required if --url is not used){Style.RESET_ALL}"
     )
 
     # Add optional output file argument
     parser.add_argument(
         "--output",
-        help="Path and filename to save the pixelized image. Defaults to 'pixelized_image.jpg' in the current directory."
+        help=f"{Fore.YELLOW}Path and filename to save the pixelized image. Defaults to 'pixelized_image.jpg' in the current directory.{Style.RESET_ALL}"
     )
 
 
@@ -196,13 +203,13 @@ if __name__ == "__main__":
         if os.path.exists(file_path):
             pixelized_image_url = pixelize_uploaded_image(api_key, file_path)
         else:
-            print(f"Error: The specified file path does not exist: {file_path}")
+            print(f"{Fore.RED}Error: The specified file path does not exist: {file_path}{Style.RESET_ALL}")
             exit(1) # Exit with an error code
 
     # Process the result if the API call was successful
     if pixelized_image_url:
-        print("\nSuccessfully pixelized image!")
-        print(f"Resulting pixelized image URL: {pixelized_image_url}")
+        print(f"\n{Fore.GREEN}Successfully pixelized image!{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Resulting pixelized image URL: {pixelized_image_url}{Style.RESET_ALL}")
 
         # Determine the output path if not provided
         if not output_path:
@@ -216,16 +223,16 @@ if __name__ == "__main__":
             except:
                  output_path = "pixelized_image.jpg" # Fallback to default
 
-            print(f"No output path specified. Using default: {output_path}")
+            print(f"{Fore.YELLOW}No output path specified. Using default: {output_path}{Style.RESET_ALL}")
 
 
         # Download the image
         if download_image(pixelized_image_url, output_path):
-            print("Image processing and download complete.")
+            print(f"{Fore.GREEN}Image processing and download complete.{Style.RESET_ALL}")
         else:
-            print("Image processing complete, but download failed.")
+            print(f"{Fore.RED}Image processing complete, but download failed.{Style.RESET_ALL}")
             exit(1) # Exit with an error code for download failure
 
     else:
-        print("\nFailed to pixelize image.")
+        print(f"{Fore.RED}Failed to pixelize image.{Style.RESET_ALL}")
         exit(1) # Exit with an error code for API failure
