@@ -2,12 +2,11 @@ import requests
 import argparse
 import os
 import urllib.parse
-import sys # Import sys to check platform for colorama
-from colorama import init, Fore, Style # Import colorama for colored output
+import sys
+from colorama import init, Fore, Style
 
 # --- Initialize Colorama ---
 # init(autoreset=True) will automatically reset the color after each print statement
-# wrap_sys=True was removed in newer versions, autoreset=True often handles wrapping
 init(autoreset=True)
 
 # --- Configuration ---
@@ -17,6 +16,9 @@ API_BASE_URL = "https://api.apilayer.com/face_pixelizer"
 # --- API Endpoints ---
 URL_ENDPOINT = f"{API_BASE_URL}/url"
 UPLOAD_ENDPOINT = f"{API_BASE_URL}/upload"
+
+# Default file name for storing the API key
+API_KEY_FILE = "api_key.txt"
 
 # --- Functions to interact with the API ---
 
@@ -152,19 +154,50 @@ def download_image(image_url: str, output_path: str) -> bool:
         print(f"{Fore.RED}An unexpected error occurred during download: {e}{Style.RESET_ALL}")
         return False
 
+def get_api_key_from_file(file_name: str) -> str | None:
+    """
+    Reads the API key from the first line of a specified file.
+
+    Args:
+        file_name: The name of the file to read the API key from.
+
+    Returns:
+        The API key string if found, None otherwise.
+    """
+    try:
+        # Get the directory of the currently executing script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, file_name)
+
+        with open(file_path, 'r') as f:
+            api_key = f.readline().strip() # Read the first line and remove leading/trailing whitespace
+            if api_key:
+                print(f"{Fore.CYAN}API key read from '{file_name}'.{Style.RESET_ALL}")
+                return api_key
+            else:
+                print(f"{Fore.YELLOW}Warning: '{file_name}' is empty. API key not found in file.{Style.RESET_ALL}")
+                return None
+    except FileNotFoundError:
+        print(f"{Fore.YELLOW}Warning: API key file '{file_name}' not found in the script directory. Please provide the API key via --api-key or create this file.{Style.RESET_ALL}")
+        return None
+    except Exception as e:
+        print(f"{Fore.RED}Error reading API key from file '{file_name}': {e}{Style.RESET_ALL}")
+        return None
+
+
 # --- Main application logic ---
 
 if __name__ == "__main__":
     # Set up command-line argument parsing
+    # Keep the description simple text for argparse help formatting
     parser = argparse.ArgumentParser(
-        description=f"{Fore.CYAN}Provided By Mersad Molaei{Style.RESET_ALL} Website: {Fore.GREEN}https://Mersadev.ir{Style.RESET_ALL} Github: {Fore.BLUE}https://Github.com/MersadMolaei {Fore.YELLOW}Pixelize faces in an image using the Face Pixelizer API.{Style.RESET_ALL}"
+        description="Pixelize faces in an image using the Face Pixelizer API."
     )
 
-    # Add required API key argument
+    # Add optional API key argument (no longer required by argparse)
     parser.add_argument(
         "--api-key",
-        required=True,
-        help=f"{Fore.YELLOW}Your API key for the Face Pixelizer API. (Required){Style.RESET_ALL}"
+        help=f"{Fore.YELLOW}Your API key for the Face Pixelizer API. If not provided, the script will look for it in '{API_KEY_FILE}'.{Style.RESET_ALL}"
     )
 
     # Add mutually exclusive group for URL or file path
@@ -192,6 +225,22 @@ if __name__ == "__main__":
     image_url = args.url
     file_path = args.file
     output_path = args.output
+
+    # If API key was not provided as a command-line argument, try to get it from the file
+    if not api_key:
+        api_key = get_api_key_from_file(API_KEY_FILE)
+
+    # Check if we have an API key before proceeding
+    if not api_key:
+        print(f"{Fore.RED}Error: No API key provided via command-line or found in '{API_KEY_FILE}'. Please provide your API key to use the application.{Style.RESET_ALL}")
+        exit(1) # Exit if no API key is available
+
+    # Print the developer info after argument parsing but before main logic
+    print(f"{Fore.CYAN}Provided By Mersad Molaei{Style.RESET_ALL}")
+    print(f"Website: {Fore.GREEN}https://Mersadev.ir{Style.RESET_ALL}")
+    print(f"Github: {Fore.BLUE}https://Github.com/MersadMolaei{Style.RESET_ALL}")
+    print("-" * 30) # Separator line
+
 
     pixelized_image_url = None
 
